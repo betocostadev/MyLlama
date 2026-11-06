@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.output/
+.vinxi/
+.tanstack/
+
+# Environment files
+.env
+.env.local
+*.local
+
+# Package manager locks & logs
+bun.lock
+bun.lockb
+*.log
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

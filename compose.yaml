@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: myllama-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myllama}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myllama_password}
+      POSTGRES_DB: ${POSTGRES_DB:-myllama}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myllama} -d ${POSTGRES_DB:-myllama}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - myllama_network
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+    container_name: myllama-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-myllama}:${POSTGRES_PASSWORD:-myllama_password}@postgres:5432/${POSTGRES_DB:-myllama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - myllama_network
+
+volumes:
+  postgres_data:
+    name: myllama_postgres_data
+
+networks:
+  myllama_network:
+    name: myllama_network
+    driver: bridge

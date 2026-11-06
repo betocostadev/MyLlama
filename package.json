@@ -1,0 +1,15 @@
+{
+  "name": "myllama",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "bun --filter \"*\" --parallel dev",
+    "dev:server": "bun --filter server dev",
+    "dev:web": "bun --filter web dev",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  }
+}

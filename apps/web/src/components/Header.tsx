@@ -1,0 +1,41 @@
+import { Link } from '@tanstack/react-router'
+import ThemeToggle from './ThemeToggle'
+
+export default function Header() {
+  return (
+    <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
+      <nav className="page-wrap flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 sm:py-4">
+        <h2 className="m-0 flex-shrink-0 text-base font-semibold tracking-tight">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3.5 py-1.5 text-sm font-bold text-[var(--sea-ink)] no-underline shadow-[0_8px_24px_rgba(30,90,72,0.08)] sm:px-4 sm:py-2"
+          >
+            <span className="text-xl">🦙</span>
+            <span className="tracking-tight text-lg">MyLlama</span>
+            <span className="rounded bg-[rgba(79,184,178,0.2)] px-1.5 py-0.5 text-xs font-medium text-[var(--lagoon-deep)]">
+              Scaffold
+            </span>
+          </Link>
+        </h2>
+
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="nav-link font-medium"
+            activeProps={{ className: 'nav-link is-active' }}
+          >
+            Dashboard
+          </Link>
+          <Link
+            to="/about"
+            className="nav-link font-medium"
+            activeProps={{ className: 'nav-link is-active' }}
+          >
+            Architecture
+          </Link>
+          <ThemeToggle />
+        </div>
+      </nav>
+    </header>
+  )
+}
