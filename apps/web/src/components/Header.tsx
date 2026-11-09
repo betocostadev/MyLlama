@@ -13,7 +13,7 @@ export default function Header() {
             <span className="text-xl">🦙</span>
             <span className="tracking-tight text-lg">MyLlama</span>
             <span className="rounded bg-[rgba(79,184,178,0.2)] px-1.5 py-0.5 text-xs font-medium text-[var(--lagoon-deep)]">
-              Scaffold
+              Alpha
             </span>
           </Link>
         </h2>
