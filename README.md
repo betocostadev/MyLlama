@@ -10,8 +10,8 @@ A local-first, open-source workspace for chatting with AI language models powere
  Browser / PWA (TanStack Start + Tailwind CSS)
       │
       ▼ HTTP & Streaming SSE (port 3000 -> 4000)
- Bun + TypeScript API (Port 4000) ──────► Host Ollama (Port 11434)
-      │                                    (Installed & managed on host)
+ Bun + TypeScript API (Port 4000 in Docker or Local) ──────► Host Ollama (Port 11434)
+      │                                                         (Managed on Mac host)
       ▼ SQL Queries
  PostgreSQL 16 (Port 5432 in Docker)
 ```
@@ -27,11 +27,12 @@ A local-first, open-source workspace for chatting with AI language models powere
 ```text
 myllama/
 ├── apps/
-│   ├── web/                 # TanStack Start PWA (React 19, Vite, Tailwind v4)
-│   └── server/              # Bun TypeScript API (Hono, Bun SQL)
+│   ├── web/                 # TanStack Start PWA (React 19, Vite, Tailwind v4, Chat UI)
+│   ├── server/              # Bun TypeScript API (Hono, Bun SQL, Ollama SSE proxy)
+│   └── mobile/              # Reserved for future React Native / Expo client
 ├── docker/
 │   └── server.Dockerfile   # Production Bun container configuration
-├── compose.yaml             # PostgreSQL 16 & containerized server definition
+├── compose.yaml             # PostgreSQL 16 & containerized Bun server
 ├── package.json             # Bun monorepo workspace & root commands
 ├── .env.example             # Documented environment configuration
 └── README.md
@@ -43,60 +44,52 @@ myllama/
 
 ### 1. Prerequisites
 - [Bun](https://bun.sh) (v1.2+)
-- [Docker Desktop](https://www.docker.com) (for PostgreSQL)
-- [Ollama](https://ollama.ai) (optional for initial scaffold, required for chat)
+- [Docker Desktop](https://www.docker.com) (running on your Mac)
+- [Ollama](https://ollama.ai) (running on your Mac host)
 
-### 2. Install Dependencies
+### 2. Install Workspace Dependencies
 ```bash
 bun install
 ```
 
-### 3. Start PostgreSQL (Docker)
-Ensure Docker Desktop is open and running, then:
+### 3. Running the Stack
+
+You have two workflows depending on whether you want the Bun server running in Docker or locally:
+
+#### Option A: Dockerized Stack (Recommended)
+Builds and runs PostgreSQL 16 and the Bun server in Docker:
 ```bash
 bun run docker:up
-# Or directly: docker compose up -d postgres
+# Or: docker compose up -d --build
+```
+Then start the web frontend:
+```bash
+bun run dev:web
 ```
 
-### 4. Start Development Servers
-Run the web application and Bun server concurrently:
+#### Option B: Local Server Development
+Runs PostgreSQL in Docker, but runs both the web UI and Bun server locally:
 ```bash
-bun run dev
-```
-
-- **Web Dashboard**: [http://localhost:3000](http://localhost:3000)
-- **Bun API Server**: [http://localhost:4000](http://localhost:4000)
-- **API Health Check**: [http://localhost:4000/health/ready](http://localhost:4000/health/ready)
-
-### 5. Optional: Start Ollama (on host machine)
-```bash
-ollama serve
-# Pull a lightweight model if needed:
-ollama pull llama3.2
+bun run docker:db   # Starts only PostgreSQL in Docker
+bun run dev         # Runs web (port 3000) and server (port 4000) locally
 ```
 
 ---
 
-## 📦 Containerized Server Smoke Test
+## 🌐 Endpoints & Ports
 
-You can build and run both the Bun server and PostgreSQL together in Docker:
-```bash
-docker compose up --build
-```
-The server container automatically connects to PostgreSQL on Docker's internal bridge network and resolves Ollama on macOS via `host.docker.internal:11434`.
+| Component | Port | Address | Description |
+| :--- | :--- | :--- | :--- |
+| **Web UI** | 3000 | `http://localhost:3000` | TanStack Start interactive chat & dashboard |
+| **Bun API** | 4000 | `http://localhost:4000` | REST & Server-Sent Events (SSE) API |
+| **PostgreSQL** | 5432 | `localhost:5432` | Dockerized PostgreSQL 16 database |
+| **Ollama** | 11434 | `http://localhost:11434` | Host AI engine (`gemma4:12b-mlx`, etc.) |
 
 ---
 
-## 🎯 Project Roadmap
+## 💬 API Routes
 
-- [x] **Milestone 1: Scaffold & End-to-End Connectivity**
-  - Bun monorepo workspace setup
-  - TanStack Start frontend with live service health indicators
-  - Bun API with `/health` and `/health/ready` probe endpoints
-  - Docker Compose configuration for PostgreSQL and Bun server
-- [ ] **Milestone 2: Database Schema & Migrations**
-  - Drizzle ORM integration for Profiles, Conversations, Messages, and Projects
-  - Tab-scoped guest identity management
-- [ ] **Milestone 3: Ollama Streaming & Chat Integration**
-  - Server-Sent Events (SSE) streaming model responses from Ollama to TanStack Start
-  - Resilient persistence of conversation history
+- `GET /health`: Basic server heartbeat.
+- `GET /health/ready`: Deep dependency readiness (verifies PostgreSQL and Ollama connectivity).
+- `GET /api/models`: Lists installed local Ollama models.
+- `POST /api/chat`: Proxies chat prompts to Ollama with optional real-time token streaming (`stream: true`).
