@@ -1,13 +1,15 @@
 import { SQL } from "bun";
 
 const databaseUrl =
-  process.env.DATABASE_URL ||
-  "postgres://myllama:myllama_password@localhost:5432/myllama";
+  process.env.DATABASE_URL
 
 let sqlInstance: SQL | null = null;
 
 export function getSql(): SQL {
   if (!sqlInstance) {
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL environment variable is not set");
+    }
     sqlInstance = new SQL(databaseUrl);
   }
   return sqlInstance;

@@ -1,17 +1,13 @@
 FROM oven/bun:1-alpine AS base
 WORKDIR /app
 
-# Copy root workspace and server package manifests
-COPY package.json ./
-COPY apps/server/package.json ./apps/server/
+# Copy server package manifest and install dependencies
+COPY apps/server/package.json ./package.json
+RUN bun install --production
 
-# Install dependencies
-RUN bun install --frozen-lockfile || bun install
-
-# Copy server source code
-COPY apps/server ./apps/server
-
-WORKDIR /app/apps/server
+# Copy server source code and configuration
+COPY apps/server/tsconfig.json ./
+COPY apps/server/src ./src
 
 ENV PORT=4000
 ENV NODE_ENV=production

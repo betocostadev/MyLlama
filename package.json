@@ -8,7 +8,8 @@
     "dev": "bun --filter \"*\" --parallel dev",
     "dev:server": "bun --filter server dev",
     "dev:web": "bun --filter web dev",
-    "docker:up": "docker compose up -d",
+    "docker:up": "docker compose up -d --build",
+    "docker:db": "docker compose up -d postgres",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f"
   }

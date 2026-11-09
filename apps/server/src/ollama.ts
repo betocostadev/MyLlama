@@ -1,5 +1,6 @@
-const ollamaBaseUrl =
-  process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+export function getOllamaBaseUrl(): string {
+  return process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+}
 
 export interface OllamaModel {
   name: string;
@@ -13,12 +14,18 @@ export interface OllamaModel {
   };
 }
 
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
 export async function checkOllamaConnection(): Promise<{
   connected: boolean;
   version?: string;
   models: OllamaModel[];
   message: string;
 }> {
+  const ollamaBaseUrl = getOllamaBaseUrl();
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
@@ -67,4 +74,50 @@ export async function checkOllamaConnection(): Promise<{
       message: `Ollama check failed: ${message}`,
     };
   }
+}
+
+export async function chatWithOllama({
+  model,
+  messages,
+}: {
+  model: string;
+  messages: ChatMessage[];
+}): Promise<{
+  model: string;
+  content: string;
+  thinking?: string;
+  totalDuration?: number;
+}> {
+  const ollamaBaseUrl = getOllamaBaseUrl();
+  const response = await fetch(`${ollamaBaseUrl}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: false,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`Ollama returned status ${response.status}: ${errText}`);
+  }
+
+  const data = (await response.json()) as {
+    model: string;
+    message?: {
+      role: string;
+      content: string;
+      thinking?: string;
+    };
+    total_duration?: number;
+  };
+
+  return {
+    model: data.model,
+    content: data.message?.content || "",
+    thinking: data.message?.thinking,
+    totalDuration: data.total_duration,
+  };
 }
