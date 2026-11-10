@@ -22,33 +22,34 @@ export function ServiceIndicatorChip({
     if (isReady) {
       switch (variant) {
         case 'blue':
-          return 'border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+          return 'border-blue-500/30 bg-blue-50 text-blue-900 dark:border-sky-400/50 dark:bg-sky-950/80 dark:text-sky-200'
         case 'purple':
-          return 'border-purple-500/20 bg-purple-500/10 text-purple-700 dark:text-purple-300'
+          return 'border-purple-500/30 bg-purple-50 text-purple-900 dark:border-purple-400/50 dark:bg-purple-950/80 dark:text-purple-200'
         case 'emerald':
         default:
-          return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+          return 'border-emerald-500/30 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-950/80 dark:text-emerald-200'
       }
     }
 
     switch (notReadyVariant) {
       case 'rose':
-        return 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+        return 'border-rose-500/30 bg-rose-50 text-rose-900 dark:border-rose-400/50 dark:bg-rose-950/80 dark:text-rose-200'
       case 'zinc':
-        return 'border-zinc-500/20 bg-zinc-500/10 text-zinc-600 dark:text-zinc-400'
+        return 'border-zinc-400/40 bg-zinc-100 text-zinc-900 dark:border-zinc-500/50 dark:bg-zinc-800/80 dark:text-zinc-200'
       case 'amber':
       default:
-        return 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+        return 'border-amber-500/30 bg-amber-50 text-amber-900 dark:border-amber-400/50 dark:bg-amber-950/80 dark:text-amber-200'
     }
   }
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium ${getStyleClass()}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors shadow-xs ${getStyleClass()}`}
     >
-      {icon}
+      <span className="shrink-0">{icon}</span>
       <span>
-        {label}: {value}
+        <span className="opacity-90">{label}:</span>{' '}
+        <span className="font-semibold">{value}</span>
       </span>
     </div>
   )
@@ -97,7 +98,11 @@ export function ServiceIndicators({
       <ServiceIndicatorChip
         icon={<Cpu className="h-3.5 w-3.5" />}
         label="Ollama"
-        value={isOllamaReady ? `Host (${modelsCount} model${modelsCount === 1 ? '' : 's'})` : 'Offline'}
+        value={
+          isOllamaReady
+            ? `Host (${modelsCount} model${modelsCount === 1 ? '' : 's'})`
+            : 'Offline'
+        }
         isReady={isOllamaReady}
         variant="purple"
         notReadyVariant="zinc"
@@ -108,7 +113,7 @@ export function ServiceIndicators({
         onClick={onRefresh}
         disabled={isRefreshing}
         title="Refresh service status"
-        className="rounded-full border border-[var(--line)] bg-[var(--island-bg)] p-1.5 text-[var(--sea-ink)] hover:bg-[var(--chip-bg)] transition shadow-sm disabled:opacity-60"
+        className="rounded-full border border-[var(--line)] bg-[var(--chip-bg)] p-1.5 text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)] transition shadow-xs disabled:opacity-60"
       >
         <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
       </button>

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import ThemeToggle from './ThemeToggle'
+import ThemeToggle from '../ThemeToggle'
 
 export default function Header() {
   return (
@@ -31,7 +31,7 @@ export default function Header() {
             className="nav-link font-medium"
             activeProps={{ className: 'nav-link is-active' }}
           >
-            Architecture
+            About
           </Link>
           <ThemeToggle />
         </div>
