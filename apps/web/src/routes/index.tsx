@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useServiceHealth, useModelConfig, useOllamaChat } from '@myllama/hooks'
 import {
   Server,
   Database,
@@ -21,37 +22,6 @@ import {
 
 export const Route = createFileRoute('/')({ component: Dashboard })
 
-interface HealthResponse {
-  status: 'ready' | 'degraded' | 'unknown'
-  timestamp: string
-  services: {
-    database: {
-      status: 'connected' | 'disconnected'
-      message: string
-    }
-    ollama: {
-      status: 'connected' | 'disconnected'
-      version?: string
-      modelsCount?: number
-      models?: string[]
-      message: string
-    }
-  }
-}
-
-interface OllamaModel {
-  name: string
-  size: number
-}
-
-interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  thinking?: string
-  showThinking?: boolean
-}
-
 export function Dashboard() {
   const [apiUrl] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -63,230 +33,38 @@ export function Dashboard() {
     return 'http://localhost:4000'
   })
 
-  // Connectivity state
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking')
-  const [healthData, setHealthData] = useState<HealthResponse | null>(null)
-  const [models, setModels] = useState<OllamaModel[]>([])
-  const [selectedModel, setSelectedModel] = useState<string>('')
-  const [latency, setLatency] = useState<number | null>(null)
-  const [lastChecked, setLastChecked] = useState<Date | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // 1. Service Health & Connectivity hook
+  const {
+    isBackendReady,
+    isPostgresReady,
+    isOllamaReady,
+    healthData,
+    latency,
+    isRefreshing,
+    checkHealth,
+  } = useServiceHealth({ apiUrl })
 
-  // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content:
-        '👋 Welcome to MyLlama! I am connected to your local Ollama instance through the Bun server. Type a message below or pick one of the sample prompts to test me.',
-    },
-  ])
-  const [inputPrompt, setInputPrompt] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [chatError, setChatError] = useState<string | null>(null)
+  // 2. Model Selection & Configuration hook
+  const { models, selectedModel, setSelectedModel, config, isLoadingModels } =
+    useModelConfig({ apiUrl })
+
+  // 3. Ollama Chat & Streaming hook
+  const {
+    messages,
+    inputPrompt,
+    setInputPrompt,
+    isGenerating,
+    chatError,
+    sendMessage,
+    toggleThinking,
+    clearChat,
+  } = useOllamaChat({ apiUrl, model: selectedModel, config })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const scrollToBottom = () => {
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
   }, [messages, isGenerating])
-
-  const checkHealth = useCallback(async () => {
-    setIsRefreshing(true)
-    const startTime = performance.now()
-
-    try {
-      // 1. Check basic backend health
-      const baseRes = await fetch(`${apiUrl}/health`, {
-        signal: AbortSignal.timeout(3000),
-      })
-
-      if (!baseRes.ok) {
-        throw new Error(`Server returned HTTP ${baseRes.status}`)
-      }
-
-      setBackendStatus('online')
-      setLatency(Math.round(performance.now() - startTime))
-
-      // 2. Check full readiness (PostgreSQL + Ollama)
-      const readyRes = await fetch(`${apiUrl}/health/ready`, {
-        signal: AbortSignal.timeout(4000),
-      })
-      const readyJson = (await readyRes.json()) as HealthResponse
-      setHealthData(readyJson)
-
-      // 3. Fetch models if Ollama is connected
-      if (readyJson.services?.ollama?.status === 'connected') {
-        const modelsRes = await fetch(`${apiUrl}/api/models`, {
-          signal: AbortSignal.timeout(3000),
-        })
-        if (modelsRes.ok) {
-          const modelsJson = await modelsRes.json()
-          const list = modelsJson.models || []
-          setModels(list)
-          if (list.length > 0 && !selectedModel) {
-            setSelectedModel(list[0].name)
-          }
-        }
-      } else {
-        setModels([])
-      }
-    } catch {
-      setBackendStatus('offline')
-      setLatency(null)
-      setHealthData(null)
-      setModels([])
-    } finally {
-      setIsRefreshing(false)
-      setLastChecked(new Date())
-    }
-  }, [apiUrl, selectedModel])
-
-  useEffect(() => {
-    checkHealth()
-    const interval = setInterval(checkHealth, 8000)
-    return () => clearInterval(interval)
-  }, [checkHealth])
-
-  const isPostgresReady = healthData?.services?.database?.status === 'connected'
-  const isOllamaReady = healthData?.services?.ollama?.status === 'connected'
-  const isBackendReady = backendStatus === 'online'
-
-  // Submit prompt to Ollama via Bun server
-  const handleSendMessage = async (promptToSend?: string) => {
-    const text = (promptToSend || inputPrompt).trim()
-    if (!text || isGenerating) return
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: text,
-    }
-
-    const assistantMsgId = (Date.now() + 1).toString()
-    const placeholderAssistant: ChatMessage = {
-      id: assistantMsgId,
-      role: 'assistant',
-      content: '',
-      thinking: '',
-      showThinking: false,
-    }
-
-    const newMessages = [...messages, userMessage]
-    setMessages([...newMessages, placeholderAssistant])
-    setInputPrompt('')
-    setIsGenerating(true)
-    setChatError(null)
-
-    const payloadMessages = newMessages
-      .filter((m) => m.id !== 'welcome')
-      .map((m) => ({ role: m.role, content: m.content }))
-
-    try {
-      // Stream response via SSE
-      const response = await fetch(`${apiUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: selectedModel || (models[0]?.name ?? 'gemma4:12b-mlx'),
-          messages: payloadMessages,
-          stream: true,
-        }),
-      })
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({ error: response.statusText }))
-        throw new Error(errJson.error || `HTTP ${response.status}`)
-      }
-
-      if (!response.body) {
-        throw new Error('No readable response body received from server')
-      }
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let streamBuffer = ''
-      let accumulatedContent = ''
-      let accumulatedThinking = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        streamBuffer += decoder.decode(value, { stream: true })
-        const lines = streamBuffer.split('\n')
-        streamBuffer = lines.pop() || ''
-
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed.startsWith('data:')) continue
-
-          const jsonStr = trimmed.slice(5).trim()
-          if (!jsonStr) continue
-
-          try {
-            const parsed = JSON.parse(jsonStr) as {
-              content?: string
-              thinking?: string
-              done?: boolean
-            }
-            if (parsed.content) accumulatedContent += parsed.content
-            if (parsed.thinking) accumulatedThinking += parsed.thinking
-
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantMsgId
-                  ? {
-                      ...msg,
-                      content: accumulatedContent,
-                      thinking: accumulatedThinking,
-                    }
-                  : msg
-              )
-            )
-          } catch {
-            // Ignore partial parse errors
-          }
-        }
-      }
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err)
-      setChatError(errMsg)
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === assistantMsgId
-            ? {
-                ...msg,
-                content: `⚠️ Error contacting Ollama: ${errMsg}`,
-              }
-            : msg
-        )
-      )
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const toggleThinking = (msgId: string) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msgId ? { ...m, showThinking: !m.showThinking } : m))
-    )
-  }
-
-  const clearChat = () => {
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: 'Chat cleared. Ask me anything!',
-      },
-    ])
-    setChatError(null)
-  }
 
   const samplePrompts = [
     'Explain how local AI differs from cloud AI in 2 sentences.',
@@ -349,7 +127,7 @@ export function Dashboard() {
           </div>
 
           <button
-            onClick={checkHealth}
+            onClick={() => checkHealth()}
             disabled={isRefreshing}
             title="Refresh service status"
             className="rounded-full border border-[var(--line)] bg-[var(--island-bg)] p-1.5 text-[var(--sea-ink)] hover:bg-[var(--chip-bg)] transition shadow-sm disabled:opacity-60"
@@ -378,6 +156,8 @@ export function Dashboard() {
                   </option>
                 ))}
               </select>
+            ) : isLoadingModels ? (
+              <span className="text-xs text-[var(--sea-ink-soft)]">Loading models...</span>
             ) : (
               <span className="text-xs font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
                 {isOllamaReady ? 'No models found' : 'Ollama not connected'}
@@ -483,7 +263,7 @@ export function Dashboard() {
             {samplePrompts.map((prompt) => (
               <button
                 key={prompt}
-                onClick={() => handleSendMessage(prompt)}
+                onClick={() => sendMessage(prompt)}
                 disabled={isGenerating || !isOllamaReady}
                 className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1 text-xs text-[var(--sea-ink)] hover:border-purple-500/40 hover:text-purple-600 transition disabled:opacity-50"
               >
@@ -498,7 +278,7 @@ export function Dashboard() {
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              handleSendMessage()
+              sendMessage()
             }}
             className="flex items-center gap-2"
           >

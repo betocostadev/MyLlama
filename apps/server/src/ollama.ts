@@ -1,22 +1,7 @@
+import type { OllamaModel, ChatMessage } from "@myllama/types";
+
 export function getOllamaBaseUrl(): string {
   return process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-}
-
-export interface OllamaModel {
-  name: string;
-  model: string;
-  size: number;
-  digest: string;
-  details?: {
-    family?: string;
-    parameter_size?: string;
-    quantization_level?: string;
-  };
-}
-
-export interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
 }
 
 export async function checkOllamaConnection(): Promise<{
@@ -81,7 +66,7 @@ export async function chatWithOllama({
   messages,
 }: {
   model: string;
-  messages: ChatMessage[];
+  messages: Array<{ role: string; content: string }>;
 }): Promise<{
   model: string;
   content: string;

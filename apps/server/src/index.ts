@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { streamSSE } from "hono/streaming";
+import type { ChatRequestMessage, HealthResponse, ChatRequest } from "@myllama/types";
 import { checkDatabaseConnection } from "./db.ts";
 import {
   checkOllamaConnection,
   chatWithOllama,
   getOllamaBaseUrl,
-  type ChatMessage,
 } from "./ollama.ts";
 
 const app = new Hono();
@@ -44,26 +44,25 @@ app.get("/health/ready", async (c) => {
 
   const isReady = dbStatus.connected;
 
-  return c.json(
-    {
-      status: isReady ? "ready" : "degraded",
-      timestamp: new Date().toISOString(),
-      services: {
-        database: {
-          status: dbStatus.connected ? "connected" : "disconnected",
-          message: dbStatus.message,
-        },
-        ollama: {
-          status: ollamaStatus.connected ? "connected" : "disconnected",
-          version: ollamaStatus.version,
-          modelsCount: ollamaStatus.models.length,
-          models: ollamaStatus.models.map((m) => m.name),
-          message: ollamaStatus.message,
-        },
+  const response: HealthResponse = {
+    status: isReady ? "ready" : "degraded",
+    timestamp: new Date().toISOString(),
+    services: {
+      database: {
+        status: dbStatus.connected ? "connected" : "disconnected",
+        message: dbStatus.message,
+      },
+      ollama: {
+        status: ollamaStatus.connected ? "connected" : "disconnected",
+        version: ollamaStatus.version,
+        modelsCount: ollamaStatus.models.length,
+        models: ollamaStatus.models.map((m) => m.name),
+        message: ollamaStatus.message,
       },
     },
-    isReady ? 200 : 503
-  );
+  };
+
+  return c.json(response, isReady ? 200 : 503);
 });
 
 app.get("/api/models", async (c) => {
@@ -85,12 +84,7 @@ app.get("/api/models", async (c) => {
 
 // Chat endpoint: handles both streaming (SSE) and synchronous responses
 app.post("/api/chat", async (c) => {
-  let body: {
-    model?: string;
-    prompt?: string;
-    messages?: ChatMessage[];
-    stream?: boolean;
-  };
+  let body: ChatRequest;
 
   try {
     body = await c.req.json();
@@ -99,9 +93,12 @@ app.post("/api/chat", async (c) => {
   }
 
   // Ensure we have messages
-  const messages: ChatMessage[] = body.messages || [];
+  const messages: ChatRequestMessage[] = body.messages ? [...body.messages] : [];
   if (messages.length === 0 && body.prompt) {
-    messages.push({ role: "user", content: body.prompt });
+    messages.push({
+      role: "user",
+      content: body.prompt,
+    });
   }
 
   if (messages.length === 0) {
@@ -117,7 +114,8 @@ app.post("/api/chat", async (c) => {
     } else {
       return c.json(
         {
-          error: "No Ollama models found. Please pull a model using 'ollama pull <model>'",
+          error:
+            "No Ollama models found. Please pull a model using 'ollama pull <model>'",
         },
         400
       );
@@ -134,7 +132,7 @@ app.post("/api/chat", async (c) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        messages,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
         stream: true,
       }),
     });
@@ -202,8 +200,11 @@ app.post("/api/chat", async (c) => {
 
   // Non-streaming fallback
   try {
-    const result = await chatWithOllama({ model, messages });
-    return c.json(result);
+    const result = await chatWithOllama({
+      model,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    });
+    return c.json({ ...result, done: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return c.json({ error: message }, 500);

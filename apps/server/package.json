@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@myllama/types": "workspace:*",
     "hono": "^4.7.0"
   },
   "devDependencies": {
