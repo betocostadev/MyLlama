@@ -1,14 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef, useEffect } from 'react'
 import { useServiceHealth, useModelConfig, useOllamaChat } from '@myllama/hooks'
+import { ServiceIndicators } from '../components/status/ServiceIndicators'
+import { StatusCard } from '../components/status/StatusCard'
 import {
   Server,
   Database,
   Cpu,
-  RefreshCw,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
   Send,
   Sparkles,
   ChevronDown,
@@ -89,52 +87,14 @@ export function Dashboard() {
         </div>
 
         {/* Live Service Indicators */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {/* Bun API */}
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium ${
-              isBackendReady
-                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                : 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'
-            }`}
-          >
-            <Server className="h-3.5 w-3.5" />
-            <span>Bun API: {isBackendReady ? 'Online (4000)' : 'Offline'}</span>
-          </div>
-
-          {/* PostgreSQL */}
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium ${
-              isPostgresReady
-                ? 'border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                : 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300'
-            }`}
-          >
-            <Database className="h-3.5 w-3.5" />
-            <span>PostgreSQL: {isPostgresReady ? 'Docker (5432)' : 'Disconnected'}</span>
-          </div>
-
-          {/* Ollama */}
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium ${
-              isOllamaReady
-                ? 'border-purple-500/20 bg-purple-500/10 text-purple-700 dark:text-purple-300'
-                : 'border-zinc-500/20 bg-zinc-500/10 text-zinc-600 dark:text-zinc-400'
-            }`}
-          >
-            <Cpu className="h-3.5 w-3.5" />
-            <span>Ollama: {isOllamaReady ? `Host (${models.length} model)` : 'Offline'}</span>
-          </div>
-
-          <button
-            onClick={() => checkHealth()}
-            disabled={isRefreshing}
-            title="Refresh service status"
-            className="rounded-full border border-[var(--line)] bg-[var(--island-bg)] p-1.5 text-[var(--sea-ink)] hover:bg-[var(--chip-bg)] transition shadow-sm disabled:opacity-60"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+        <ServiceIndicators
+          isBackendReady={isBackendReady}
+          isPostgresReady={isPostgresReady}
+          isOllamaReady={isOllamaReady}
+          modelsCount={models.length}
+          isRefreshing={isRefreshing}
+          onRefresh={() => checkHealth()}
+        />
       </section>
 
       {/* Main Interactive Chat Card */}
@@ -246,7 +206,6 @@ export function Dashboard() {
 
           {chatError && (
             <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>{chatError}</span>
             </div>
           )}
@@ -315,85 +274,52 @@ export function Dashboard() {
       {/* Connectivity & Architecture Status Cards */}
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         {/* Bun API Server Card */}
-        <article className="island-shell rounded-2xl p-4 border border-[var(--line)] flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Server className="h-4 w-4 text-emerald-500" />
-              <span className="font-bold text-xs text-[var(--sea-ink)]">Bun API</span>
-            </div>
-            {isBackendReady ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                <CheckCircle2 className="h-3 w-3" /> Online
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full">
-                <XCircle className="h-3 w-3" /> Offline
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-[var(--sea-ink-soft)] mb-2">
-            {isBackendReady
+        <StatusCard
+          icon={<Server className="h-4 w-4 text-emerald-500" />}
+          title="Bun API"
+          isReady={isBackendReady}
+          readyBadgeText="Online"
+          notReadyBadgeText="Offline"
+          notReadyBadgeVariant="rose"
+          description={
+            isBackendReady
               ? `Healthy on port 4000${latency ? ` (${latency}ms roundtrip)` : ''}`
-              : `Cannot reach ${apiUrl}. Ensure the Bun server is running.`}
-          </p>
-          <div className="pt-2 border-t border-[var(--line)] text-[10px] text-[var(--sea-ink-soft)] font-mono">
-            Docker / Local &bull; Port 4000
-          </div>
-        </article>
+              : `Cannot reach ${apiUrl}. Ensure the Bun server is running.`
+          }
+          footer="Docker / Local • Port 4000"
+        />
 
         {/* PostgreSQL Database Card */}
-        <article className="island-shell rounded-2xl p-4 border border-[var(--line)] flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4 text-blue-500" />
-              <span className="font-bold text-xs text-[var(--sea-ink)]">PostgreSQL 16</span>
-            </div>
-            {isPostgresReady ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                <CheckCircle2 className="h-3 w-3" /> Connected
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                <AlertTriangle className="h-3 w-3" /> Disconnected
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-[var(--sea-ink-soft)] mb-2">
-            {isPostgresReady
+        <StatusCard
+          icon={<Database className="h-4 w-4 text-blue-500" />}
+          title="PostgreSQL 16"
+          isReady={isPostgresReady}
+          readyBadgeText="Connected"
+          notReadyBadgeText="Disconnected"
+          notReadyBadgeVariant="amber"
+          description={
+            isPostgresReady
               ? 'PostgreSQL connected & healthy in Docker container.'
-              : healthData?.services?.database?.message || 'Run "bun run docker:db"'}
-          </p>
-          <div className="pt-2 border-t border-[var(--line)] text-[10px] text-[var(--sea-ink-soft)] font-mono">
-            Docker: myllama-postgres &bull; Port 5432
-          </div>
-        </article>
+              : healthData?.services?.database?.message || 'Run "bun run docker:db"'
+          }
+          footer="Docker: myllama-postgres • Port 5432"
+        />
 
         {/* Ollama AI Engine Card */}
-        <article className="island-shell rounded-2xl p-4 border border-[var(--line)] flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Cpu className="h-4 w-4 text-purple-500" />
-              <span className="font-bold text-xs text-[var(--sea-ink)]">Ollama (Host)</span>
-            </div>
-            {isOllamaReady ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                <CheckCircle2 className="h-3 w-3" /> Connected
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-500 bg-zinc-500/10 px-2 py-0.5 rounded-full">
-                <AlertTriangle className="h-3 w-3" /> Offline
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-[var(--sea-ink-soft)] mb-2">
-            {isOllamaReady
+        <StatusCard
+          icon={<Cpu className="h-4 w-4 text-purple-500" />}
+          title="Ollama (Host)"
+          isReady={isOllamaReady}
+          readyBadgeText="Connected"
+          notReadyBadgeText="Offline"
+          notReadyBadgeVariant="zinc"
+          description={
+            isOllamaReady
               ? `Connected (v${healthData?.services?.ollama?.version}). Model: ${selectedModel || 'detected'}`
-              : 'Run "ollama serve" on your Mac host machine.'}
-          </p>
-          <div className="pt-2 border-t border-[var(--line)] text-[10px] text-[var(--sea-ink-soft)] font-mono">
-            Host: localhost:11434 &bull; Local inference
-          </div>
-        </article>
+              : 'Run "ollama serve" on your Mac host machine.'
+          }
+          footer="Host: localhost:11434 • Local inference"
+        />
       </section>
 
       {/* Footer Navigation */}
