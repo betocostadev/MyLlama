@@ -22,12 +22,12 @@ export function ServiceIndicatorChip({
     if (isReady) {
       switch (variant) {
         case 'blue':
-          return 'border-blue-500/30 bg-blue-50 text-blue-900 dark:border-sky-400/50 dark:bg-sky-950/80 dark:text-sky-200'
+          return 'border-blue-500/30 bg-blue-50 text-blue-900 dark:border-sky-4500/20 dark:bg-sky-950/80 dark:text-sky-200'
         case 'purple':
-          return 'border-purple-500/30 bg-purple-50 text-purple-900 dark:border-purple-400/50 dark:bg-purple-950/80 dark:text-purple-200'
+          return 'border-purple-500/30 bg-purple-50 text-purple-900 dark:border-purple-500/20 dark:bg-purple-950/80 dark:text-purple-200'
         case 'emerald':
         default:
-          return 'border-emerald-500/30 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-950/80 dark:text-emerald-200'
+          return 'border-emerald-500/30 bg-emerald-50 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-950/80 dark:text-emerald-200'
       }
     }
 

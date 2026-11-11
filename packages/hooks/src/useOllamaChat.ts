@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import type { ChatMessage, ModelConfig } from "@myllama/types";
+import { useApiUrl } from "@myllama/hooks";
 
 export interface UseOllamaChatOptions {
-  apiUrl: string;
   model: string;
   config?: ModelConfig;
   initialWelcome?: string;
@@ -23,7 +23,6 @@ const DEFAULT_WELCOME =
   "👋 Welcome to MyLlama! I am connected to your local Ollama instance through the Bun server. Type a message below or pick one of the sample prompts to test me.";
 
 export function useOllamaChat({
-  apiUrl,
   model,
   config,
   initialWelcome = DEFAULT_WELCOME,
@@ -38,6 +37,7 @@ export function useOllamaChat({
   const [inputPrompt, setInputPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const apiUrl = useApiUrl();
 
   const sendMessage = useCallback(
     async (promptOverride?: string) => {
@@ -126,10 +126,10 @@ export function useOllamaChat({
                 prev.map((msg) =>
                   msg.id === assistantMsgId
                     ? {
-                        ...msg,
-                        content: accumulatedContent,
-                        thinking: accumulatedThinking,
-                      }
+                      ...msg,
+                      content: accumulatedContent,
+                      thinking: accumulatedThinking,
+                    }
                     : msg
                 )
               );
@@ -145,9 +145,9 @@ export function useOllamaChat({
           prev.map((msg) =>
             msg.id === assistantMsgId
               ? {
-                  ...msg,
-                  content: `⚠️ Error contacting Ollama: ${errMsg}`,
-                }
+                ...msg,
+                content: `⚠️ Error contacting Ollama: ${errMsg}`,
+              }
               : msg
           )
         );

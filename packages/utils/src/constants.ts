@@ -1,0 +1,1 @@
+export const STORAGE_PREFIX = "myllama:model-settings";

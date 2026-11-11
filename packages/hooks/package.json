@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@myllama/types": "workspace:*"
+    "@myllama/types": "workspace:*",
+    "@myllama/utils": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

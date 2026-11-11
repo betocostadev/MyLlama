@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import type { OllamaModel, ModelConfig } from "@myllama/types";
+import { STORAGE_PREFIX } from "@myllama/utils";
+import { useApiUrl } from "@myllama/hooks";
 
 export interface UseModelConfigOptions {
-  apiUrl: string;
   defaultConfig?: ModelConfig;
   storageKey?: string;
 }
@@ -18,16 +19,16 @@ export interface UseModelConfigReturn {
   error: string | null;
 }
 
-const STORAGE_PREFIX = "myllama:model-settings";
+
 
 export function useModelConfig({
-  apiUrl,
   defaultConfig = { temperature: 0.7 },
   storageKey = STORAGE_PREFIX,
 }: UseModelConfigOptions): UseModelConfigReturn {
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const apiUrl = useApiUrl();
 
   // Restore saved model name
   const [selectedModel, setSelectedModelState] = useState<string>(() => {

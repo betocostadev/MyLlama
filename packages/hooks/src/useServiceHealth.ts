@@ -3,9 +3,9 @@ import type {
   HealthResponse,
   BackendConnectivity,
 } from "@myllama/types";
+import { useApiUrl } from "@myllama/hooks";
 
 export interface UseServiceHealthOptions {
-  apiUrl: string;
   pollInterval?: number;
 }
 
@@ -22,7 +22,6 @@ export interface UseServiceHealthReturn {
 }
 
 export function useServiceHealth({
-  apiUrl,
   pollInterval = 8000,
 }: UseServiceHealthOptions): UseServiceHealthReturn {
   const [backendStatus, setBackendStatus] = useState<BackendConnectivity>("checking");
@@ -30,6 +29,7 @@ export function useServiceHealth({
   const [latency, setLatency] = useState<number | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const apiUrl = useApiUrl();
 
   const checkHealth = useCallback(async () => {
     setIsRefreshing(true);

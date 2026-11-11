@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useRef, useEffect } from 'react'
-import { useServiceHealth, useModelConfig, useOllamaChat } from '@myllama/hooks'
+import { useRef, useEffect } from 'react'
+import { useServiceHealth, useModelConfig, useOllamaChat, useApiUrl } from '@myllama/hooks'
 import { ServiceIndicators } from '../components/status/ServiceIndicators'
 import { StatusCard } from '../components/status/StatusCard'
 import {
@@ -21,15 +21,7 @@ import {
 export const Route = createFileRoute('/')({ component: Dashboard })
 
 export function Dashboard() {
-  const [apiUrl] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return (
-        (window as unknown as { __VITE_API_URL?: string }).__VITE_API_URL ||
-        'http://localhost:4000'
-      )
-    }
-    return 'http://localhost:4000'
-  })
+  const apiUrl = useApiUrl()
 
   // 1. Service Health & Connectivity hook
   const {
@@ -40,11 +32,11 @@ export function Dashboard() {
     latency,
     isRefreshing,
     checkHealth,
-  } = useServiceHealth({ apiUrl })
+  } = useServiceHealth({})
 
   // 2. Model Selection & Configuration hook
   const { models, selectedModel, setSelectedModel, config, isLoadingModels } =
-    useModelConfig({ apiUrl })
+    useModelConfig({})
 
   // 3. Ollama Chat & Streaming hook
   const {
@@ -56,7 +48,7 @@ export function Dashboard() {
     sendMessage,
     toggleThinking,
     clearChat,
-  } = useOllamaChat({ apiUrl, model: selectedModel, config })
+  } = useOllamaChat({ model: selectedModel, config })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -80,9 +72,6 @@ export function Dashboard() {
             <h1 className="text-xl font-bold tracking-tight text-[var(--sea-ink)]">
               MyLlama Workspace
             </h1>
-            <p className="text-xs text-[var(--sea-ink-soft)]">
-              Local Ollama &times; Bun Server &times; PostgreSQL in Docker
-            </p>
           </div>
         </div>
 
@@ -142,17 +131,15 @@ export function Dashboard() {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-3 max-w-3xl ${
-                msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
-              }`}
+              className={`flex gap-3 max-w-3xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
+                }`}
             >
               {/* Avatar */}
               <div
-                className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
-                  msg.role === 'user'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-purple-600/10 border border-purple-500/20 text-purple-600 dark:text-purple-400'
-                }`}
+                className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${msg.role === 'user'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-purple-600/10 border border-purple-500/20 text-purple-600 dark:text-purple-400'
+                  }`}
               >
                 {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
               </div>
@@ -185,11 +172,10 @@ export function Dashboard() {
 
                 {/* Content */}
                 <div
-                  className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-[var(--chip-bg)] border border-[var(--chip-line)] text-[var(--sea-ink)]'
-                  }`}
+                  className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${msg.role === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-[var(--chip-bg)] border border-[var(--chip-line)] text-[var(--sea-ink)]'
+                    }`}
                 >
                   {msg.content ? (
                     <div className="whitespace-pre-wrap">{msg.content}</div>
